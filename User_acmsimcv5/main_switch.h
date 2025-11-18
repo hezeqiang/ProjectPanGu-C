@@ -261,7 +261,6 @@ typedef struct {
     REAL varOmega; // mechanical
     REAL iAB[2];
     REAL iDQ[2];
-    REAL uAB[2];
     REAL Tem;
     REAL TLoad;
     REAL psi_active[2];
