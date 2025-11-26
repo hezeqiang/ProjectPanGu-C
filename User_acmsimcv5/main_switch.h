@@ -259,7 +259,8 @@ typedef struct {
     REAL theta_d_elec; // this is from encoder by default
     REAL varTheta; // mechanical
     REAL varOmega; // mechanical
-    REAL iAB[2];
+    REAL iAB[2];    
+    REAL uAB[2];
     REAL iDQ[2];
     REAL Tem;
     REAL TLoad;

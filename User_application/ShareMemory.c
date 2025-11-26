@@ -157,8 +157,8 @@ void write_DAC_buffer(){
         // (*Axis4DAC).dac_watch[73] = FE.Ortega.theta_d * ONE_OVER_2PI * 2; // unit : degree
         (*Axis4DAC).dac_watch[74] = FE.HE_EKF.theta_d * ONE_OVER_2PI * 2; // unit : degree
         (*Axis4DAC).dac_watch[75] = (*CTRL).i->iDQ[1] * 0.1; // unit : degree
-        (*Axis4DAC).dac_watch[76] = FE.HE_EKF.current_bf_compensated_dq[1] * 0.1; // unit : degree
-        (*Axis4DAC).dac_watch[77] = FE.HE_EKF.current_compensated_dq[1] * 0.1; // unit : degree
+        // (*Axis4DAC).dac_watch[76] = FE.HE_EKF.current_bf_compensated_dq[1] * 0.1; // unit : degree
+        // (*Axis4DAC).dac_watch[77] = FE.HE_EKF.current_compensated_dq[1] * 0.1; // unit : degree
 //        these two are equivalent
 //        *(*CTRL).s->Speed
 //        *CTRL->s->Speed
