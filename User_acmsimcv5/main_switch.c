@@ -8,7 +8,7 @@
     extern st_axis *Axis;
     #define DC_BUS_VOLTAGE_INVERSE (1.732 / Axis->vdc)
 #endif
-/* 瀹氫箟椤剁骇缁撴瀯浣擄紙鎸囬拡鐨勯泦鍚堬級 */
+/* Define motor control structures (pointer to pointer) */
 ST_D_SIM d_sim;
 int axisCnt = 0;
 int use_first_set_three_phase = 1;
@@ -32,7 +32,7 @@ st_pid_regulator _PID_iD_1       = st_pid_regulator_DEFAULTS;
 st_pid_regulator _PID_iQ_1       = st_pid_regulator_DEFAULTS;
 st_pid_regulator _PID_Speed_1    = st_pid_regulator_DEFAULTS;
 st_pid_regulator _PID_Position_1 = st_pid_regulator_DEFAULTS;
-/* 涓哄叏灞�缁撴瀯浣撳垎閰嶅叿浣撶殑鍐呭瓨锛屼负瀹為獙涓敱浜庡鍙扮數鏈虹殑鎺у埗缁撴瀯浣撹繘琛屽垵濮嬪寲 */
+/* Allocate memory for global structures, initialize control structures due to multiple axes for experiments */
 #if PC_SIMULATION == FALSE
     //#pragma DATA_SECTION(CTRL     ,"MYGLOBALS"); //
     #pragma DATA_SECTION(CTRL_1       ,"MYGLOBALS_1"); //
@@ -103,7 +103,7 @@ st_pid_regulator _PID_Position_1 = st_pid_regulator_DEFAULTS;
     #endif
 #endif
 
-/* 鍒濆鍖栭《绾х粨鏋勪綋鎸囬拡锛屾寚鍚戝畾涔夊ソ鐨勫唴瀛樼┖闂� */
+/* Initialize high-level structure pointers, pointing to defined memory space */
 void allocate_CTRL(struct ControllerForExperiment *p){
     /* My attemp to use calloc with TI's compiler in CCS has failed. */
         // p->motor = calloc(1,sizeof(st_pmsm_parameters)); // 鎰忔�濇槸锛屼竴涓紝st_pmsm_parameters閭ｄ箞澶х殑绌洪棿
@@ -436,7 +436,7 @@ void tustin_PI(st_pid_regulator *r){
     r->SatDiff = r->Out - r->OutNonSat;
 }
 REAL _veclocityController(REAL cmd_varOmega, REAL varOmega){
-    /* 鎯虫竻妤氫綘鐨勯�熷害鎺у埗鍣ㄥ埌搴曡涓嶈涓诲姩闄嶉锛� */
+    /* Please tune your speed controller so that it does not oscillate */
     if ((*CTRL).s->the_vc_count++ >= d_sim.FOC.VL_EXE_PER_CL_EXE){
         (*CTRL).s->the_vc_count = 1;
         PID_Speed->Ref = cmd_varOmega;
@@ -456,7 +456,7 @@ REAL _veclocityController(REAL cmd_varOmega, REAL varOmega){
 
 #if WHO_USER == USER_YZZ
 REAL _RK4_veclocityController(REAL cmd_varOmega, REAL varOmega){
-    /* 鎯虫竻妤氫綘鐨勯�熷害鎺у埗鍣ㄥ埌搴曡涓嶈涓诲姩闄嶉锛� */
+    /* Please tune your speed controller so that it does not oscillate */
     if ((*CTRL).s->the_vc_count++ >= SPEED_LOOP_CEILING){
         (*CTRL).s->the_vc_count = 1;
         PID_Speed->Ref = cmd_varOmega;
@@ -487,7 +487,7 @@ void FOC_with_vecocity_control(REAL theta_d_elec, REAL varOmega, REAL cmd_varOme
 
 
 void _pseudoEncoder(){
-    /* 鏂紑缂栫爜鍣紝寮�鐜帶鍒剁數娴佺煝閲忔棆杞�佽烦璺冿紝閫嗭紙鍙樺櫒锛夐棴鐫�鐪� */
+    /* Newly opened encoder, detected multi-turn encoder position rollover, please (operator) close the motor */
     (*CTRL).i->cmd_iDQ[0] = (*debug).set_id_command;
     (*CTRL).i->cmd_iDQ[1] = (*debug).set_iq_command;
     if (fabsf((*debug).Overwrite_Current_Frequency) > 0)
@@ -566,7 +566,7 @@ void _RK4_PI_Controller_FOC(REAL theta_d_elec, REAL iAB[2]){
     (*CTRL).o->cmd_uDQ[0] = decoupled_d_axis_voltage;
     (*CTRL).o->cmd_uDQ[1] = decoupled_q_axis_voltage;
 
-    /* 7. 鍙嶅笗鍏嬪彉鎹� */
+    /* 7. Inverse Park transformation */
     // See D:\Users\horyc\Downloads\Documents\2003 TIA Bae SK Sul A compensation method for time delay of.pdf
     // (*CTRL).s->cosT_compensated_1p5omegaTs = cosf(used_theta_d_elec + 1.5omg_elec*CL_TS);
     // (*CTRL).s->sinT_compensated_1p5omegaTs = sinf(used_theta_d_elec + 1.5omg_elec*CL_TS);
@@ -590,7 +590,7 @@ void _onlyFOC(REAL theta_d_elec, REAL iAB[2], REAL varOmega){
     (*CTRL).s->sinT = sin(theta_d_elec);
     (*CTRL).i->iDQ[0] = AB2M(iAB[0], iAB[1], (*CTRL).s->cosT, (*CTRL).s->sinT);
     (*CTRL).i->iDQ[1] = AB2T(iAB[0], iAB[1], (*CTRL).s->cosT, (*CTRL).s->sinT);
-    /* 鏇存柊渚濊禆浜巇q杞寸數娴佺殑鐗╃悊閲� */
+    /* Update the physical quantity of the auxiliary dq axis encoder */
     REAL Tem     = CLARKE_TRANS_TORQUE_GAIN * MOTOR.npp * (MOTOR.KE + (MOTOR.Ld - MOTOR.Lq) * (*CTRL).i->iDQ[0]) * (*CTRL).i->iDQ[1];     // 杞煩 For luenberger position observer for HFSI
     REAL cmd_Tem = CLARKE_TRANS_TORQUE_GAIN * MOTOR.npp * (MOTOR.KE + (MOTOR.Ld - MOTOR.Lq) * (*CTRL).i->cmd_iDQ[0]) * (*CTRL).i->cmd_iDQ[1];
     MOTOR.KActive = MOTOR.KE + (MOTOR.Ld - MOTOR.Lq) * (*CTRL).i->iDQ[0];
@@ -614,7 +614,7 @@ void _onlyFOC(REAL theta_d_elec, REAL iAB[2], REAL varOmega){
         decoupled_q_axis_voltage = PID_iQ->Out;
     }
 
-    /* 瀵硅ˉ鍋垮悗鐨刣q杞寸數鍘嬭繘琛岄檺骞呭害 */
+    /* Limit the amplitude of the dq axis current after saturation */
     if (decoupled_d_axis_voltage > PID_iD->OutLimit) decoupled_d_axis_voltage = PID_iD->OutLimit;
     else if (decoupled_d_axis_voltage < -PID_iD->OutLimit) decoupled_d_axis_voltage = -PID_iD->OutLimit;
     if (decoupled_q_axis_voltage > PID_iQ->OutLimit) decoupled_q_axis_voltage = PID_iQ->OutLimit;
@@ -622,7 +622,7 @@ void _onlyFOC(REAL theta_d_elec, REAL iAB[2], REAL varOmega){
     (*CTRL).o->cmd_uDQ[0] = decoupled_d_axis_voltage;
     (*CTRL).o->cmd_uDQ[1] = decoupled_q_axis_voltage;
 
-    /* 7. 鍙嶅笗鍏嬪彉鎹� */
+    /* 7. Inverse Park transformation */
     // See D:\Users\horyc\Downloads\Documents\2003 TIA Bae SK Sul A compensation method for time delay of.pdf
     // (*CTRL).s->cosT_compensated_1p5omegaTs = cosf(used_theta_d_elec + 1.5omg_elec*CL_TS);
     // (*CTRL).s->sinT_compensated_1p5omegaTs = sinf(used_theta_d_elec + 1.5omg_elec*CL_TS);
@@ -804,7 +804,7 @@ void _user_commands(){
         #endif
     #endif
 
-    /* 鎵瑕嗙洊 */
+    /* Find the maximum value */
     overwrite_sweeping_frequency();
 }
 

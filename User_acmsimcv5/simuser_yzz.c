@@ -3478,8 +3478,14 @@ void SuspensionCurrentControl(){
         CTRL->sc->cmd_FX = overwrite_suspension_amplitude * cos(CTRL->timebase*overwrite_suspension_frequency);
     }
     
-    CTRL->sc->cmd_iAB[0] = 0.5 * CTRL->sc->KIC_inv * (CTRL->sc->cmd_FX - CTRL->sc->cmd_FY);
-    CTRL->sc->cmd_iAB[1] = 0.5 * CTRL->sc->KIC_inv * (CTRL->sc->cmd_FX + CTRL->sc->cmd_FY);
+    // This current is for the circular-bridge stator
+    // CTRL->sc->cmd_iAB[0] = 0.5 * CTRL->sc->KIC_inv * (CTRL->sc->cmd_FX - CTRL->sc->cmd_FY);
+    // CTRL->sc->cmd_iAB[1] = 0.5 * CTRL->sc->KIC_inv * (CTRL->sc->cmd_FX + CTRL->sc->cmd_FY);
+
+    // This current is for the corss-bridge stator
+    CTRL->sc->cmd_iAB[0] = CTRL->sc->KIC_inv * (CTRL->sc->cmd_FX);
+    CTRL->sc->cmd_iAB[1] = CTRL->sc->KIC_inv * 
+    (CTRL->sc->cmd_FY);
     // === 2) 电流误差 ===
     CTRL->sc->P_curr[0] = CTRL->sc->cmd_iAB[0] - CTRL->sc->iAB[0];
     CTRL->sc->P_curr[1] = CTRL->sc->cmd_iAB[1] - CTRL->sc->iAB[1];
