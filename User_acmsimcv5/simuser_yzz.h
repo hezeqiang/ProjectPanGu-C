@@ -11,8 +11,8 @@
     REAL clampf(REAL x, REAL lo, REAL hi);
     REAL max(REAL a, REAL b);
     REAL min(REAL a, REAL b);
-    void SuspensionCurrentControl();
-    void SuspensionDisplacementControl();
+    void SuspensionCurrentControl(void);
+    void SuspensionDisplacementControl(void);
 /* User */
 #include "super_config.h"
 #include "main_switch.h"

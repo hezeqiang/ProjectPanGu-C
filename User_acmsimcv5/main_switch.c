@@ -18,7 +18,7 @@ struct DebugExperiment debug_1;
 struct DebugExperiment *debug = &debug_1;
 struct ObserverForSpeedReconstruction OFSR;
 REAL one_over_six = 1.0/6.0;
-// 瀹氫箟鍐呭瓨绌洪棿锛堢粨鏋勪綋锛�
+// Define memory space (structures)
 st_motor_parameters     t_motor_1={0};
 st_enc                  t_enc_1={0};
 st_psd                  t_psd_1={0};
@@ -106,7 +106,7 @@ st_pid_regulator _PID_Position_1 = st_pid_regulator_DEFAULTS;
 /* Initialize high-level structure pointers, pointing to defined memory space */
 void allocate_CTRL(struct ControllerForExperiment *p){
     /* My attemp to use calloc with TI's compiler in CCS has failed. */
-        // p->motor = calloc(1,sizeof(st_pmsm_parameters)); // 鎰忔�濇槸锛屼竴涓紝st_pmsm_parameters閭ｄ箞澶х殑绌洪棿
+        // p->motor = calloc(1,sizeof(st_pmsm_parameters)); // Be careful, one, st_pmsm_parameters how big space
         // p->I = calloc(1,sizeof(st_controller_inputs));
         // p->S = calloc(1,sizeof(st_controller_states));
         // p->O = calloc(1,sizeof(st_controller_outputs));
@@ -239,7 +239,7 @@ void init_CTRL(){
     /* Machine parameters */
     // elec
     (*CTRL).motor->R  = d_sim.init.R;
-    (*CTRL).motor->KE = d_sim.init.KE; // * (0.1/0.1342); // 銆愬疄楠岀紪鍙凤細銆�
+    (*CTRL).motor->KE = d_sim.init.KE; // * (0.1/0.1342); // Real code editing:
     (*CTRL).motor->Ld = d_sim.init.Ld;
     (*CTRL).motor->Lq = d_sim.init.Lq;
     (*CTRL).motor->Ld_inv = 1.0 / (*CTRL).motor->Ld;
@@ -282,14 +282,14 @@ void init_CTRL(){
 
 
     /* Controller Parameter Initializaiton */
-    // TODO: 鍦ㄨ繖閲屽彲浠une浣犵殑pi绯绘暟
+    // TODO: Here you can tune your pi parameters
     // KT = 1.5*npp*KE
     // d_currentKp = CLBW_Hz * 2 * np.pi * Ld
     // d_currentKi = R / Ld
     // q_currentKp = CLBW_Hz * 2 * np.pi * Lq
     // q_currentKi = R / Lq
     // speedKi = 2*np.pi * CLBW_Hz / delta**2  # THIS IS INTEGRAL GAIN
-    // speedKp = delta * speedKi / KT * Js     # 杩欓噷涓嶉渶瑕乶pp
+    // speedKp = delta * speedKi / KT * Js     # Here no need npp
 
     #if WHO_IS_USER == USER_WB
         /* WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING*/
@@ -313,8 +313,8 @@ void init_CTRL(){
         PID_iD->Ki_CODE  = d_sim.CL.SERIES_KI_D_AXIS * d_sim.CL.SERIES_KP_D_AXIS * CL_TS;
         PID_iQ->Ki_CODE  = d_sim.CL.SERIES_KI_Q_AXIS * d_sim.CL.SERIES_KP_Q_AXIS * CL_TS;
     #endif
-    PID_iD->OutLimit  = 0.57735 * d_sim.CL.LIMIT_DC_BUS_UTILIZATION * d_sim.init.Vdc; // TODO锛氬垵濮嬪寲鐨勬椂鍊欏鏋滄病鏈夌粰姣嶇嚎渚涚數杩欓噷浼氭湁闂锛屼絾鍦ㄤ腑鏂噷濡傛灉鎸佺画鍒锋柊闄愬箙灏辨病浜嬨��
-    PID_iQ->OutLimit  = 0.57735 * d_sim.CL.LIMIT_DC_BUS_UTILIZATION * d_sim.init.Vdc; // TODO锛氬垵濮嬪寲鐨勬椂鍊欏鏋滄病鏈夌粰姣嶇嚎渚涚數杩欓噷浼氭湁闂锛屼絾鍦ㄤ腑鏂噷濡傛灉鎸佺画鍒锋柊闄愬箙灏辨病浜嬨��
+    PID_iD->OutLimit  = 0.57735 * d_sim.CL.LIMIT_DC_BUS_UTILIZATION * d_sim.init.Vdc; // TODO: If the initialization time does not give the line current, there will be problems here, but in the middle if you manually reset the inverter it will be fine
+    PID_iQ->OutLimit  = 0.57735 * d_sim.CL.LIMIT_DC_BUS_UTILIZATION * d_sim.init.Vdc; // TODO: If the initialization time does not give the line current, there will be problems here, but in the middle if you manually reset the inverter it will be fine
     // /* Capture */
     // (*CTRL).cap->flag_nonlinear_filtering = FALSE;
     // (*CTRL).cap->flag_bad_U_capture = FALSE;
@@ -347,7 +347,7 @@ void init_experiment(){
     // init_d_sim();   // initilizating d_sim is removed into main.c to execute only once
     // init_debug;   // initilizating debug is removed into main.c to execute only once
     overwrite_d_sim(); // overwrite d_sim with user's algorithm
-    init_CTRL(); // 鎺у埗鍣ㄧ粨鏋勪綋鍒濆鍖�
+    init_CTRL(); // Controller structure initialization
 
     //OFSR
     init_rk4();
@@ -385,7 +385,7 @@ void init_experiment(){
         _init_Harnerfors_1998_BackCalc(); // should be placed after init_wctuner, cuz it needs to use the variable from wctuner
     #endif
 }
-/* 鍏敤鐨勬牳蹇冪數鏈烘帶鍒跺疄鐜颁唬鐮侊紝涓嶈淇敼锛�*/
+/* General incremental PI controller implementation code, do not modify */
 void incremental_PI(st_pid_regulator *r){
     r->Err = r->Ref - r->Fbk;
     r->Out = r->OutPrev + r->Kp * ( r->Err - r->ErrPrev ) + r->Ki_CODE * r->Err;
@@ -397,12 +397,12 @@ void incremental_PI(st_pid_regulator *r){
 
 void tustin_PI(st_pid_regulator *r){
     #define DYNAMIC_CLAPMING TRUE
-    r->Err = r->Ref - r->Fbk;// 璇樊
-    r->P_Term = r->Err * r->Kp;    // 姣斾緥
-    r->I_Term += r->Err * r->Ki_CODE;    // 绉垎
+    r->Err = r->Ref - r->Fbk;// Error
+    r->P_Term = r->Err * r->Kp;    // Proportional
+    r->I_Term += r->Err * r->Ki_CODE;    // Integral
     r->OutNonSat = r->I_Term;
 
-    // 娣诲姞绉垎楗卞拰鐗规��
+    // Add integral clamping and saturation
     #if DYNAMIC_CLAPMING
         // dynamic clamping
         if( r->I_Term > r->OutLimit - r->P_Term)     /* BUGGY if use r->Out instead of r->P_Term!!! */
@@ -417,22 +417,22 @@ void tustin_PI(st_pid_regulator *r){
             r->I_Term = -r->OutLimit;
     #endif
 
-    // 寰垎
+    // Differential
     // r->D_Term = r->Kd * (r->Err - r->ErrPrev);
 
-    // 杈撳嚭
+    // Output
     r->Out = r->I_Term + r->P_Term; // + r->D_Term
     r->OutNonSat += r->P_Term; // + r->D_Term
 
-    // 杈撳嚭闄愬箙
+    // Output saturation
     if(r->Out > r->OutLimit)
         r->Out = r->OutLimit;
     else if(r->Out < -r->OutLimit)
         r->Out = -r->OutLimit;
 
-    // 褰撳墠姝ヨ宸祴鍊间负涓婁竴姝ヨ宸�
+    // Current error becomes previous error
     r->ErrPrev = r->Err;
-    // 璁板綍楗卞拰杈撳嚭鍜屾湭楗卞拰杈撳嚭鐨勫樊
+    // Record the difference between saturated output and unsaturated output
     r->SatDiff = r->Out - r->OutNonSat;
 }
 REAL _veclocityController(REAL cmd_varOmega, REAL varOmega){
@@ -529,11 +529,11 @@ void rhf_PI_DynamicsforDcurrent(REAL t, REAL *x, REAL *fx){
 
 void General_PI_Dynamics(st_pid_regulator *r, void (*dynamic_func)(REAL, REAL *, REAL *)) {
     r->Err = r->Ref - r->Fbk;
-    // 璋冪敤 RK4 鏁板�肩Н鍒嗗櫒鏉ヨ绠楃Н鍒嗛」
+    // Call RK4 numerical integrator to calculate integral term
     general_1states_rk4_solver(dynamic_func, (*CTRL).timebase, &(r->I_Term), CL_TS);
-    // PI 鎺у埗鍣ㄨ緭鍑鸿绠�
+    // PI controller output calculation
     r->Out = r->Kp * r->Err + r->I_Term;
-    // 闄愬箙鎿嶄綔
+    // Saturation operation
     if (r->Out > r->OutLimit) r->Out = r->OutLimit;
     else if (r->Out < -r->OutLimit) r->Out = -r->OutLimit;
 }
@@ -549,7 +549,7 @@ void _RK4_PI_Controller_FOC(REAL theta_d_elec, REAL iAB[2]){
     PID_iQ->Ref = (*CTRL).i->cmd_iDQ[1];
     General_PI_Dynamics(CTRL->s->iQ, &rhf_PI_DynamicsforQcurrent);
     General_PI_Dynamics(CTRL->s->iD, &rhf_PI_DynamicsforDcurrent);
-        // 鐢垫祦鐜墠棣圖Q杞磋В鑰�
+        // Decoupling voltage for current regulation
     REAL decoupled_d_axis_voltage;
     REAL decoupled_q_axis_voltage;
     if(d_sim.FOC.bool_apply_decoupling_voltages_to_current_regulation == TRUE){
@@ -585,13 +585,13 @@ void _RK4_PI_Controller_FOC(REAL theta_d_elec, REAL iAB[2]){
 #endif
 
 void _onlyFOC(REAL theta_d_elec, REAL iAB[2], REAL varOmega){
-    // 甯曞厠鍙樻崲
+    // Clarke transformation
     (*CTRL).s->cosT = cos(theta_d_elec);
     (*CTRL).s->sinT = sin(theta_d_elec);
     (*CTRL).i->iDQ[0] = AB2M(iAB[0], iAB[1], (*CTRL).s->cosT, (*CTRL).s->sinT);
     (*CTRL).i->iDQ[1] = AB2T(iAB[0], iAB[1], (*CTRL).s->cosT, (*CTRL).s->sinT);
     /* Update the physical quantity of the auxiliary dq axis encoder */
-    REAL Tem     = CLARKE_TRANS_TORQUE_GAIN * MOTOR.npp * (MOTOR.KE + (MOTOR.Ld - MOTOR.Lq) * (*CTRL).i->iDQ[0]) * (*CTRL).i->iDQ[1];     // 杞煩 For luenberger position observer for HFSI
+    REAL Tem     = CLARKE_TRANS_TORQUE_GAIN * MOTOR.npp * (MOTOR.KE + (MOTOR.Ld - MOTOR.Lq) * (*CTRL).i->iDQ[0]) * (*CTRL).i->iDQ[1];     // Torque For luenberger position observer for HFSI
     REAL cmd_Tem = CLARKE_TRANS_TORQUE_GAIN * MOTOR.npp * (MOTOR.KE + (MOTOR.Ld - MOTOR.Lq) * (*CTRL).i->cmd_iDQ[0]) * (*CTRL).i->cmd_iDQ[1];
     MOTOR.KActive = MOTOR.KE + (MOTOR.Ld - MOTOR.Lq) * (*CTRL).i->iDQ[0];
 
@@ -603,7 +603,7 @@ void _onlyFOC(REAL theta_d_elec, REAL iAB[2], REAL varOmega){
     PID_iQ->Ref = (*CTRL).i->cmd_iDQ[1];
     PID_iQ->calc(PID_iQ);
 
-    // 鐢垫祦鐜墠棣圖Q杞磋В鑰�
+    // Decoupling voltage for current regulation
     REAL decoupled_d_axis_voltage;
     REAL decoupled_q_axis_voltage;
     if(d_sim.FOC.bool_apply_decoupling_voltages_to_current_regulation == TRUE){
@@ -648,7 +648,7 @@ void _onlyFOC(REAL theta_d_elec, REAL iAB[2], REAL varOmega){
                                                                         + (*CTRL).o->cmd_uAB_to_inverter[1]
                                                                         * (*CTRL).o->cmd_uAB_to_inverter[1] );
 
-    /// 8. 琛ュ伩閫嗗彉鍣ㄩ潪绾挎��
+    /// 8. Inverter nonlinearity compensation
     #if WHO_IS_USER == USER_WB
         /* wubo:  */
         wubo_inverter_Compensation( (*CTRL).i->iAB );
@@ -672,15 +672,15 @@ void _user_commands(){
     // (*CTRL).i->cmd_varOmega = (*debug).set_rpm_speed_command * RPM_2_MECH_RAD_PER_SEC;
 
     if (CTRL->motor->Rreq > 0){
-        // 鎰熷簲鐢垫満闇�瑕佸姳纾�
+        // Synchronous motor needs excitation
         (*CTRL).i->cmd_iDQ[0] = 2.0;
 
     }else{
-        // 琛ㄨ创姘哥閲囩敤 iD=0 鎺у埗
+        // Generator mode uses iD=0 control
         (*CTRL).i->cmd_iDQ[0] = 0.0;
         // (*CTRL).i->cmd_iDQ[0] = -20.0;
 
-        // 鍑告瀬姘哥閲囩敤 iD<0 鑾峰緱鏇村ぇ鐨� 鏈夊姛纾侀摼锛坅ka 杞煩绯绘暟锛�
+        // Generator mode uses iD<0 to obtain larger power factor, aka power factor angle
         // (*CTRL).i->cmd_iDQ[0] = -1.0;
     }
     if ((*CTRL).timebase < 2 && (*CTRL).timebase > 0){
@@ -811,17 +811,17 @@ void _user_commands(){
 
 void overwrite_sweeping_frequency(){
     #if WHO_IS_USE == USER_WB
-        //杩欏彞璇濆簲璇ユ斁鍦ㄦ渶鍓嶉潰锛�
+        // This sentence should be placed at the front
             d_sim.user.timebase_for_Sweeping += CL_TS; // Separate the timebase with the DSP timebase !!!
 
         #if PC_SIMULATION
-            ACM.TLoad = (1.5 * d_sim.init.npp * d_sim.init.KE * 3.0 * 0.5); // 寮哄埗灏嗚礋杞借缃负0    
+            ACM.TLoad = (1.5 * d_sim.init.npp * d_sim.init.KE * 3.0 * 0.5); // Set the initial small load to 0    
         #endif
 
         if(d_sim.user.bool_apply_sweeping_frequency_excitation){
 
             if (d_sim.user.bool_speed_sweeping_with_Load == TRUE){
-                //鍓峏XX绉掑紑鍚亽閫熸ā寮忥紝浠ヤ娇寰楃郴缁熻揪鍒扮ǔ鎬�
+                // After XX seconds of starting, apply sweeping frequency to make the system reach steady state
                 if ( (d_sim.user.timebase_for_Sweeping < d_sim.user.Stable_Time_for_Sweeping) && (d_sim.user.flag_clear_timebase_once == FALSE)  ){
                     // (*CTRL).i->cmd_varOmega = 0.5 * d_sim.user.CMD_SPEED_SINE_RPM * RPM_2_MECH_RAD_PER_SEC;
                     (*CTRL).i->cmd_varOmega = 0.0;
@@ -833,14 +833,14 @@ void overwrite_sweeping_frequency(){
                 }
             }
 
-            // 鐢熸垚鎵淇″彿
+            // Generate sine signal
             if ( d_sim.user.timebase_for_Sweeping  > d_sim.user.CMD_SPEED_SINE_END_TIME ){
                 d_sim.user.CMD_SPEED_SINE_HZ += d_sim.user.CMD_SPEED_SINE_STEP_SIZE;
                 d_sim.user.CMD_SPEED_SINE_LAST_END_TIME = d_sim.user.CMD_SPEED_SINE_END_TIME;
                 d_sim.user.CMD_SPEED_SINE_END_TIME += 1.0 / d_sim.user.CMD_SPEED_SINE_HZ;
             }
             if (d_sim.user.CMD_SPEED_SINE_HZ > d_sim.user.CMD_SPEED_SINE_HZ_CEILING){
-                (*CTRL).i->cmd_varOmega = 0.0; // 鍒拌揪鎵鐨勯鐜囦笂闄愶紝閫熷害褰掗浂
+                (*CTRL).i->cmd_varOmega = 0.0; // After sweeping the sine signal, speed is zero
                 (*CTRL).i->cmd_iDQ[0] = 0.0;
                 (*CTRL).i->cmd_iDQ[1] = 0.0;
             }else{
@@ -963,10 +963,10 @@ int  main_switch(long mode_select){
         break;
     case MODE_SELECT_FOC_SENSORLESS: //31
         #if (WHO_IS_USER == USER_YZZ)
-            US_P(0) = (*CTRL).o->cmd_uAB[0]; // 鍚庣紑_P琛ㄧず涓婁竴姝ョ殑鐢靛帇锛孭 = Previous
-            US_P(1) = (*CTRL).o->cmd_uAB[1]; // 鍚庣紑_C琛ㄧず褰撳墠姝ョ殑鐢靛帇锛孋 = Current
-            US_C(0) = (*CTRL).o->cmd_uAB[0]; // 鍚庣紑_P琛ㄧず涓婁竴姝ョ殑鐢靛帇锛孭 = Previous
-            US_C(1) = (*CTRL).o->cmd_uAB[1]; // 鍚庣紑_C琛ㄧず褰撳墠姝ョ殑鐢靛帇锛孋 = Current
+            US_P(0) = (*CTRL).o->cmd_uAB[0]; // Suffix _P means the voltage of the previous step, P = Previous
+            US_P(1) = (*CTRL).o->cmd_uAB[1]; // Suffix _C means the voltage of the current step, C = Current
+            US_C(0) = (*CTRL).o->cmd_uAB[0]; // Suffix _P means the voltage of the previous step, P = Previous
+            US_C(1) = (*CTRL).o->cmd_uAB[1]; // Suffix _C means the voltage of the current step, C = Current
             IS_C(0)           = (*CTRL).i->iAB[0];
             IS_C(1)           = (*CTRL).i->iAB[1];
         #endif
@@ -998,7 +998,7 @@ int  main_switch(long mode_select){
 
         break;
     case MODE_SELECT_INDIRECT_FOC:   // 32
-        _user_commands();         // 鐢ㄦ埛鎸囦护
+        _user_commands();         // User commands
         #if (WHO_IS_USER == USER_CJH)
             controller_IFOC();
         #endif
@@ -1042,10 +1042,10 @@ int  main_switch(long mode_select){
 
     case MODE_SELECT_VELOCITY_LOOP: // 4
         #if (WHO_IS_USER == USER_HZQ)
-            US_P(0) = (*CTRL).o->cmd_uAB[0]; // 鍚庣紑_P琛ㄧず涓婁竴姝ョ殑鐢靛帇锛孭 = Previous
-            US_P(1) = (*CTRL).o->cmd_uAB[1]; // 鍚庣紑_C琛ㄧず褰撳墠姝ョ殑鐢靛帇锛孋 = Current
-            US_C(0) = (*CTRL).o->cmd_uAB[0]; // 鍚庣紑_P琛ㄧず涓婁竴姝ョ殑鐢靛帇锛孭 = Previous
-            US_C(1) = (*CTRL).o->cmd_uAB[1]; // 鍚庣紑_C琛ㄧず褰撳墠姝ョ殑鐢靛帇锛孋 = Current
+            US_P(0) = (*CTRL).o->cmd_uAB[0]; // Suffix _P means the voltage of the previous step, P = Previous
+            US_P(1) = (*CTRL).o->cmd_uAB[1]; // Suffix _C means the voltage of the current step, C = Current
+            US_C(0) = (*CTRL).o->cmd_uAB[0]; // Suffix _P means the voltage of the previous step, P = Previous
+            US_C(1) = (*CTRL).o->cmd_uAB[1]; // Suffix _C means the voltage of the current step, C = Current
             IS_C(0)           = (*CTRL).i->iAB[0];
             IS_C(1)           = (*CTRL).i->iAB[1];
 
@@ -1068,12 +1068,12 @@ int  main_switch(long mode_select){
 
     case MODE_SELECT_VELOCITY_LOOP_SENSORLESS : //41
         #if (WHO_IS_USER == USER_HZQ)
-            US_P(0) = (*CTRL).o->cmd_uAB[0]; // 鍚庣紑_P琛ㄧず涓婁竴姝ョ殑鐢靛帇锛孭 = Previous
-            US_P(1) = (*CTRL).o->cmd_uAB[1]; // 鍚庣紑_C琛ㄧず褰撳墠姝ョ殑鐢靛帇锛孋 = Current
-            US_C(0) = (*CTRL).i->uAB_filtered[0]; // 鍚庣紑_P琛ㄧず涓婁竴姝ョ殑鐢靛帇锛孭 = Previous
-            US_C(1) = (*CTRL).i->uAB_filtered[1]; // 鍚庣紑_C琛ㄧず褰撳墠姝ョ殑鐢靛帇锛孋 = Current
-            // US_C(0) = (*CTRL).o->cmd_uAB[0]; // 鍚庣紑_P琛ㄧず涓婁竴姝ョ殑鐢靛帇锛孭 = Previous
-            // US_C(1) = (*CTRL).o->cmd_uAB[1]; // 鍚庣紑_C琛ㄧず褰撳墠姝ョ殑鐢靛帇锛孋 = Current
+            US_P(0) = (*CTRL).o->cmd_uAB[0]; // Suffix _P means the voltage of the previous step, P = Previous
+            US_P(1) = (*CTRL).o->cmd_uAB[1]; // Suffix _C means the voltage of the current step, C = Current
+            US_C(0) = (*CTRL).i->uAB_filtered[0]; // Suffix _P means the voltage of the previous step, P = Previous
+            US_C(1) = (*CTRL).i->uAB_filtered[1]; // Suffix _C means the voltage of the current step, C = Current
+            // US_C(0) = (*CTRL).o->cmd_uAB[0]; // Suffix _P means the voltage of the previous step, P = Previous
+            // US_C(1) = (*CTRL).o->cmd_uAB[1]; // Suffix _C means the voltage of the current step, C = Current
             IS_C(0)           = (*CTRL).i->iAB[0];
             IS_C(1)           = (*CTRL).i->iAB[1];
         #endif
@@ -1118,10 +1118,10 @@ int  main_switch(long mode_select){
     case MODE_SELECT_NONLINEAR_FLUX_OBSERVER: // 6
         #if (AFE_44_ORTEGA_2011)
             #if (WHO_IS_USER == USER_HZQ)
-                US_P(0) = (*CTRL).o->cmd_uAB[0]; // 鍚庣紑_P琛ㄧず涓婁竴姝ョ殑鐢靛帇锛孭 = Previous
-                US_P(1) = (*CTRL).o->cmd_uAB[1]; // 鍚庣紑_C琛ㄧず褰撳墠姝ョ殑鐢靛帇锛孋 = Current
-                US_C(0) = (*CTRL).o->cmd_uAB[0]; // 鍚庣紑_P琛ㄧず涓婁竴姝ョ殑鐢靛帇锛孭 = Previous
-                US_C(1) = (*CTRL).o->cmd_uAB[1]; // 鍚庣紑_C琛ㄧず褰撳墠姝ョ殑鐢靛帇锛孋 = Current
+                US_P(0) = (*CTRL).o->cmd_uAB[0]; // Suffix _P means the voltage of the previous step, P = Previous
+                US_P(1) = (*CTRL).o->cmd_uAB[1]; // Suffix _C means the voltage of the current step, C = Current
+                US_C(0) = (*CTRL).o->cmd_uAB[0]; // Suffix _P means the voltage of the previous step, P = Previous
+                US_C(1) = (*CTRL).o->cmd_uAB[1]; // Suffix _C means the voltage of the current step, C = Current
                 IS_C(0)           = (*CTRL).i->iAB[0];
                 IS_C(1)           = (*CTRL).i->iAB[1];
             #endif
@@ -1137,7 +1137,7 @@ int  main_switch(long mode_select){
 
             // OBSV.theta_d = (*CTRL).i->theta_d_elec;
             // while(OBSV.theta_d > M_PI) OBSV.theta_d  -= 2*M_PI;
-            // while(OBSV.theta_d < -M_PI) OBSV.theta_d += 2*M_PI;  // 鍙嶈浆锛�
+            // while(OBSV.theta_d < -M_PI) OBSV.theta_d += 2*M_PI;  // Wrap around
             // if (d_sim.user.bool_ESO_SPEED_ON == TRUE){
             //     Main_esoaf_chen2021();
             // }
@@ -1160,10 +1160,10 @@ int  main_switch(long mode_select){
     case MODE_SELECT_CONSTRAINT_DOMINATED_EKF: // 16
         #if (AFE_16_HE_EKF_2025)
             #if (WHO_IS_USER == USER_HZQ)
-                US_P(0) = (*CTRL).o->cmd_uAB[0]; // 鍚庣紑_P琛ㄧず涓婁竴姝ョ殑鐢靛帇锛孭 = Previous
-                US_P(1) = (*CTRL).o->cmd_uAB[1]; // 鍚庣紑_C琛ㄧず褰撳墠姝ョ殑鐢靛帇锛孋 = Current
-                US_C(0) = (*CTRL).o->cmd_uAB[0]; // 鍚庣紑_P琛ㄧず涓婁竴姝ョ殑鐢靛帇锛孭 = Previous
-                US_C(1) = (*CTRL).o->cmd_uAB[1]; // 鍚庣紑_C琛ㄧず褰撳墠姝ョ殑鐢靛帇锛孋 = Current
+                US_P(0) = (*CTRL).o->cmd_uAB[0]; // Suffix _P means the voltage of the previous step, P = Previous
+                US_P(1) = (*CTRL).o->cmd_uAB[1]; // Suffix _C means the voltage of the current step, C = Current
+                US_C(0) = (*CTRL).o->cmd_uAB[0]; // Suffix _P means the voltage of the previous step, P = Previous
+                US_C(1) = (*CTRL).o->cmd_uAB[1]; // Suffix _C means the voltage of the current step, C = Current
                 IS_C(0)           = (*CTRL).i->iAB[0];
                 IS_C(1)           = (*CTRL).i->iAB[1];
             #endif
@@ -1179,7 +1179,7 @@ int  main_switch(long mode_select){
 
             // OBSV.theta_d = (*CTRL).i->theta_d_elec;
             // while(OBSV.theta_d > M_PI) OBSV.theta_d  -= 2*M_PI;
-            // while(OBSV.theta_d < -M_PI) OBSV.theta_d += 2*M_PI;  // 鍙嶈浆锛�
+            // while(OBSV.theta_d < -M_PI) OBSV.theta_d += 2*M_PI;  // Wrap around
             // if (d_sim.user.bool_ESO_SPEED_ON == TRUE){
             //     Main_esoaf_chen2021();
             // }
@@ -1314,10 +1314,10 @@ int  main_switch(long mode_select){
         _user_commands();  
         #if WHO_IS_USER == USER_YZZ
         //for OBSV
-            US_P(0) = (*CTRL).o->cmd_uAB[0]; // 鍚庣紑_P琛ㄧず涓婁竴姝ョ殑鐢靛帇锛孭 = Previous
-            US_P(1) = (*CTRL).o->cmd_uAB[1]; // 鍚庣紑_C琛ㄧず褰撳墠姝ョ殑鐢靛帇锛孋 = Current
-            US_C(0) = (*CTRL).o->cmd_uAB[0]; // 鍚庣紑_P琛ㄧず涓婁竴姝ョ殑鐢靛帇锛孭 = Previous
-            US_C(1) = (*CTRL).o->cmd_uAB[1]; // 鍚庣紑_C琛ㄧず褰撳墠姝ョ殑鐢靛帇锛孋 = Current
+            US_P(0) = (*CTRL).o->cmd_uAB[0]; // Suffix _P means the voltage of the previous step, P = Previous
+            US_P(1) = (*CTRL).o->cmd_uAB[1]; // Suffix _C means the voltage of the current step, C = Current
+            US_C(0) = (*CTRL).o->cmd_uAB[0]; // Suffix _P means the voltage of the previous step, P = Previous
+            US_C(1) = (*CTRL).o->cmd_uAB[1]; // Suffix _C means the voltage of the current step, C = Current
             IS_C(0)           = (*CTRL).i->iAB[0];
             IS_C(1)           = (*CTRL).i->iAB[1];
         //for OFSR
@@ -1332,7 +1332,7 @@ int  main_switch(long mode_select){
         pmsm_observers();
         OBSV.theta_d = (*CTRL).i->theta_d_elec;
         while(OBSV.theta_d > M_PI) OBSV.theta_d  -= 2*M_PI;
-        while(OBSV.theta_d < -M_PI) OBSV.theta_d += 2*M_PI;  // 鍙嶈浆锛�
+        while(OBSV.theta_d < -M_PI) OBSV.theta_d += 2*M_PI;  // Wrap around
 
         if (d_sim.user.bool_ESO_SPEED_ON == TRUE){
             Main_esoaf_chen2021();
@@ -1354,10 +1354,10 @@ int  main_switch(long mode_select){
         break;
     case MODE_SELECT_INVERTER_NONLINEARITY_SENSORLESS: // 49
         #if (WHO_IS_USER == USER_YZZ)
-            US_P(0) = (*CTRL).o->cmd_uAB[0]; // 鍚庣紑_P琛ㄧず涓婁竴姝ョ殑鐢靛帇锛孭 = Previous
-            US_P(1) = (*CTRL).o->cmd_uAB[1]; // 鍚庣紑_C琛ㄧず褰撳墠姝ョ殑鐢靛帇锛孋 = Current
-            US_C(0) = (*CTRL).o->cmd_uAB[0]; // 鍚庣紑_P琛ㄧず涓婁竴姝ョ殑鐢靛帇锛孭 = Previous
-            US_C(1) = (*CTRL).o->cmd_uAB[1]; // 鍚庣紑_C琛ㄧず褰撳墠姝ョ殑鐢靛帇锛孋 = Current
+            US_P(0) = (*CTRL).o->cmd_uAB[0]; // Suffix _P means the voltage of the previous step, P = Previous
+            US_P(1) = (*CTRL).o->cmd_uAB[1]; // Suffix _C means the voltage of the current step, C = Current
+            US_C(0) = (*CTRL).o->cmd_uAB[0]; // Suffix _P means the voltage of the previous step, P = Previous
+            US_C(1) = (*CTRL).o->cmd_uAB[1]; // Suffix _C means the voltage of the current step, C = Current
             IS_C(0)           = (*CTRL).i->iAB[0];
             IS_C(1)           = (*CTRL).i->iAB[1];
         #endif
@@ -1377,7 +1377,7 @@ int  main_switch(long mode_select){
         // controller_PMSMife_with_commands();
         OBSV.theta_d = (*CTRL).i->theta_d_elec;
         while(OBSV.theta_d > M_PI) OBSV.theta_d  -= 2*M_PI;
-        while(OBSV.theta_d < -M_PI) OBSV.theta_d += 2*M_PI;  // 鍙嶈浆锛�
+        while(OBSV.theta_d < -M_PI) OBSV.theta_d += 2*M_PI;  // Wrap around
         if (d_sim.user.bool_ESO_SPEED_ON == TRUE){
             Main_esoaf_chen2021();
         }
@@ -1438,15 +1438,15 @@ int  main_switch(long mode_select){
         #if WHO_IS_USER == USER_WB && PC_SIMULATION == TRUE
             d_sim.user.flag_Nyquist_one_cycle_DONE = FALSE;
             if ((*CTRL).timebase > d_sim.user.CMD_SPEED_SINE_END_TIME){
-                d_sim.user.flag_Nyquist_one_cycle_DONE = TRUE; // 鐢ㄦ潵娓呯┖Nyquist_sum_sin鍜宻um_cos锛屼互杩涜涓嬩竴娆¤绠�
+                d_sim.user.flag_Nyquist_one_cycle_DONE = TRUE; // Used to clear Nyquist_sum_sin and sum_cos for next calculation
                 d_sim.user.CMD_SPEED_SINE_HZ += d_sim.user.CMD_SPEED_SINE_STEP_SIZE;
                 d_sim.user.CMD_SPEED_SINE_LAST_END_TIME = d_sim.user.CMD_SPEED_SINE_END_TIME;
                 d_sim.user.CMD_SPEED_SINE_END_TIME += d_sim.user.Nyquist_plot_num_cycles / d_sim.user.CMD_SPEED_SINE_HZ;
             }
             if (d_sim.user.CMD_SPEED_SINE_HZ > d_sim.user.Nyquist_Freq_Ceiling){
-                (*CTRL).i->cmd_iDQ[0] = 0.0; // 鍒拌揪鎵鐨勯鐜囦笂闄愶紝閫熷害褰掗浂
+                (*CTRL).i->cmd_iDQ[0] = 0.0; // After sweeping the sine signal, speed is zero
             }else{
-                // 杩欓噷鐨勪俊鍙峰叾瀹炲彲浠ユ槸浠绘剰褰㈠紡鐨勶紝涓嶄竴瀹氭槸姝ｅ鸡娉�
+                // The excitation here can be any form, not necessarily sine wave
                 (*CTRL).i->cmd_iDQ[0] = d_sim.user.Nyquist_Input_Current_Amp * sinf ( 2 * M_PI * d_sim.user.CMD_SPEED_SINE_HZ * ( (*CTRL).timebase - d_sim.user.CMD_SPEED_SINE_LAST_END_TIME ) );
                 _onlyFOC( (*CTRL).i->theta_d_elec, (*CTRL).i->iAB );
 
@@ -1457,7 +1457,7 @@ int  main_switch(long mode_select){
                     d_sim.user.Nyquist_sum_sin = 0.0;
                     d_sim.user.Nyquist_sum_cos = 0.0;
                 }
-                // 鍒╃敤鍚岄cos()鍜宻in()鎻愬彇璋愭尝淇″彿鐨勫疄閮ㄥ拰铏氶儴锛屽亣璁剧郴缁熶负绾挎�у畾甯哥郴缁�
+                // Use orthogonal cos() and sin() to extract the real and imaginary parts of the response signal, assuming the system is linear time-invariant
                 // A=sum( va*cos ) B=sum( va*sin )
                 // a1=2A/N a2=2B/N mag=sqrt(a1^2+a2^2) deg=tan(a2/a1)
                 d_sim.user.Nyquist_sum_sin += PID_iD->Ref * sinf( 2 * M_PI * d_sim.user.CMD_SPEED_SINE_HZ * ( (*CTRL).timebase - d_sim.user.CMD_SPEED_SINE_LAST_END_TIME ) );
@@ -1478,13 +1478,13 @@ int  main_switch(long mode_select){
         break;
     case MODE_SELECT_SUSPENSION_CONTROL: // 100
         #if WHO_IS_USER == USER_YZZ
+            SuspensionDisplacementControl();
             SuspensionCurrentControl();
-            // SuspensionDisplacementControl();
         #endif
         return 100; 
         break;
     default:
-        // 鐢靛帇鎸囦护(*CTRL).o->cmd_uAB[0/1]閫氳繃閫嗗彉鍣紝浜х敓瀹為檯鐢靛帇ACM.ual, ACM.ube锛堝彉鎹㈠埌dq绯讳笅寰楀埌ACM.ud锛孉CM.uq锛�
+        // Voltage commands (*CTRL).o->cmd_uAB[0/1] pass through the inverter to generate actual voltages ACM.ual, ACM.ube, transformed to dq frame to get ACM.ud, ACM.uq
         // voltage_commands_to_pwm(); // this function only exists in DSP codes
         // inverter_model(); // in Simulation
         (*debug).error = 999;
@@ -1501,7 +1501,7 @@ int  main_switch(long mode_select){
         // ACM.Ld = d_sim.init.Ld * 0.25;
         // ACM.Lq = d_sim.init.Lq * 0.25;
         
-        // 0. 鍙傛暟鏃跺彉
+        // 0. Parameter unchanged
         // if (fabsf((*CTRL).timebase-0.025)<CL_TS){
         //     printf("[Runtime] Rotor inertia of the simulated machine has changed! Js=%g\n", ACM.Js);
             // ACM.Js     = 0.1 * d_sim.init.Js; // kg.m^2 0.41500000000000004
@@ -1520,7 +1520,7 @@ int  main_switch(long mode_select){
         static REAL Tload = 0.0;
         // static int load_state = 0;
         // static REAL dc_part = LOAD_TORQUE;
-        // static REAL viscous_part = 0.0; // 杩欎釜鍙橀噺鍘诲埌Config鏂囦欢閲岄潰浜�
+        // static REAL viscous_part = 0.0; // This variable is moved to the Config file
         // viscous_part = VISCOUS_COEFF*ACM.rpm*RPM_2_ELEC_RAD_PER_SEC;
         // Tload = dc_part + viscous_part;
         if(CTRL_1.timebase > 0.5){
@@ -1633,9 +1633,9 @@ void rhf_dynamics_ESO(REAL t, REAL *x, REAL *fx){
     // REAL iq = AB2T(IS(0), IS(1), cos(xPos), sin(xPos)); // Option 2
     OFSR.esoaf.xTem = CLARKE_TRANS_TORQUE_GAIN * MOTOR.npp * MOTOR.KActive * iq;
 
-    /* 鏈祴璇曪紝濡傛灉鐢╥q缁欏畾浼氫笉浼氬ソ涓�鐐癸紵锛� 璁＄畻閲忚繕灏�*/
-    /* 鏈祴璇曪紝濡傛灉鐢╥q缁欏畾浼氫笉浼氬ソ涓�鐐癸紵锛� 璁＄畻閲忚繕灏�*/
-    /* 鏈祴璇曪紝濡傛灉鐢╥q缁欏畾浼氫笉浼氬ソ涓�鐐癸紵锛� 璁＄畻閲忚繕灏�*/
+    /* No verification, if using iq to specify, will it not be stuck at one point? The calculation volume is still small*/
+    /* No verification, if using iq to specify, will it not be stuck at one point? The calculation volume is still small*/
+    /* No verification, if using iq to specify, will it not be stuck at one point? The calculation volume is still small*/
     // OFSR.esoaf.xTem = CLARKE_TRANS_TORQUE_GAIN * MOTOR.npp * MOTOR.KActive * CTRL->I.cmd_iDQ[1];
 
     /* Output Error = sine of angle error */

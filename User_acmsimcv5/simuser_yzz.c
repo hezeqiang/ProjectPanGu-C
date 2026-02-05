@@ -3453,7 +3453,7 @@ void get_distorted_voltage_via_LUT(REAL ual, REAL ube, REAL ial, REAL ibe, REAL 
 int yzk_Debug = 0;
 REAL overwrite_suspension_frequency = 0.1;
 REAL overwrite_suspension_amplitude = 8.0;
-void SuspensionCurrentControl(){
+void SuspensionCurrentControl(void){
     // 1. 计算悬浮电流控制器的输出电压
     // 2. 将输出电压转换为PWM占空比re
     // === 0) 直流母线保护 ===
@@ -3514,7 +3514,7 @@ void SuspensionCurrentControl(){
     CTRL->sc->Duty[2]= 0.5; // C相占空比固定为0.5
 }
     
-void SuspensionDisplacementControl(){
+void SuspensionDisplacementControl(void){
     // 误差保存（上一次）
     CTRL->sc->P_disX_Prev = CTRL->sc->P_disX;
     CTRL->sc->P_disY_Prev = CTRL->sc->P_disY;
